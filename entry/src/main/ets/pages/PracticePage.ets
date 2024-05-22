@@ -80,6 +80,7 @@ struct PracticePage {
           .btnStyle({bg:Color.Black,font:Color.White,border:Color.White})
       }
 
+
     }.backgroundColor(Color.Gray)
       .width('100%')
     .height('100%')
