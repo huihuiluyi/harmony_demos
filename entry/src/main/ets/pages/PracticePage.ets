@@ -1,83 +1,131 @@
-@Preview
+import { SpecItem } from '../comps/SpecItem'
+import { StateItem } from '../comps/StateItem'
+import { getQuestions, Question } from '../data/data'
+import { TestStatus } from '../enums/TestStatus'
 @Entry
 @Component
 struct PracticePage {
 
-  choose :Array<string> = ['公园','商店','医院','学校']
+  @State totalCount : number = 3
+  @State data : Question[] = getQuestions(this.totalCount)
+  @State rightCount : number = 0
+  @State selectedCount : number = 0
+  @State currentQuestionIndex:number = 0
+  @State answer: string = ''
+  @State currentItemSelected : boolean = false
+  @State selectedItemStr : string = ''
+  @State testState : TestStatus = TestStatus.DEFAULT
+
+  textTimerController : TextTimerController
 
   build() {
     Column(){
       Column()
       {
-        Row(){
-          Text('准确率')
-          Blank().layoutWeight(1)
-          Text('0%').width('30%')
-            .textAlign(TextAlign.Center)
-        }.rowStyle()
 
-        Row(){
-          Text('进度')
-          Blank().layoutWeight(1)
+        //准确率
+        SpecItem({
+          label:'准确率'
+        }) {
+          Text(this.rightCount === 0 ? '0%': (this.rightCount/this.selectedCount * 100).toFixed(1) + '%').width('30%')
+              .textAlign(TextAlign.Center)
+        }
+
+        //进度
+        SpecItem({
+          label:'进度'
+        }) {
           Progress({
-            value:0,
-            total:100,
+            value:this.selectedCount,
+            total:this.totalCount,
             type:ProgressType.Linear
-          }).width('30%')
-        }.rowStyle()
+          }).width(100)
+        }
 
-        Row(){
-          Text('个数')
-          Blank().layoutWeight(1)
-          Text('0')
-            .width('30%')
-            .height('120%')
-            .fontColor(Color.White)
-            .textAlign(TextAlign.Center)
-            .backgroundColor(Color.Gray);
-        }.rowStyle()
+        //个数
+        SpecItem({
+          label:'个数'
+        }) {
+          Button(this.totalCount.toString())
+            .width(100)
+            .backgroundColor(Color.Gray)
+            .onClick(()=>{
+              TextPickerDialog.show({
+                range:['3','5','10'],
+                value:this.totalCount.toString(),
+                onAccept:(count:TextPickerResult)=> {
+                  this.totalCount = parseInt(count.value)
+                  this.data = getQuestions(this.totalCount)
+                }
+              })
+            })
+        }
 
 
-        Row(){
-          Text('用时')
-          Blank().layoutWeight(1)
-          TextTimer({isCountDown:false})
-        }.rowStyle()
+        //用时
+        SpecItem({
+          label:'用时'
+        }) {
+          TextTimer({isCountDown:false,
+            count:0,
+          controller: this.textTimerController
+          })
+        }
 
       }.backgroundColor(Color.White)
         .width('95%')
         .margin(10)
       .borderRadius(10)
 
-
-      Text('School')
-        .fontWeight(700)
+      Text(this.data[this.currentQuestionIndex].word)
+        .fontWeight(FontWeight.Bold)
         .fontSize(40)
 
-      Text('Students go to school to learn and grow.')
-        .fontColor(Color.White)
+      Text(this.data[this.currentQuestionIndex].sentence)
+        .fontColor(Color.White).margin(10).fontSize(20)
 
-      List(){
-        ForEach(this.choose,(item:string)=> {
-          ListItem() {
-            Text(item).width('100%')
-              .padding(10)
-              .backgroundColor(Color.White)
-              .textAlign(TextAlign.Center)
-              .borderRadius(5)
-          }
+      Column({space:5}){
+        ForEach(this.data[this.currentQuestionIndex].options,(option:string)=> {
+          StateItem({
+            itemStr: option,
+            hasSelected: this.currentItemSelected,
+            answer: this.data[this.currentQuestionIndex].answer,
+            selectedItemStr: this.selectedItemStr,
+            click:()=> {
+              this.selectedItemStr = option
+              this.currentItemSelected = true
+              if (this.selectedItemStr === this.data[this.currentQuestionIndex].answer) {
+                this.rightCount++
+              }
+              this.selectedCount++
+              setTimeout(()=> {
+                this.resetState()
+              },500)
+            }
+          })
         })
-      }.width('80%')
-      .divider({strokeWidth:5,color:Color.Gray})
-
+      }
 
       Row({space:50}){
         Button('结束测试')
           .type(ButtonType.Capsule)
           .btnStyle({bg:Color.White,font:Color.Black,border:Color.Black})
+          .enabled(this.testState == TestStatus.RUNNING)
+          .onClick(()=> {
+            this.stopTest()
+          })
 
-        Button('开始测试').type(ButtonType.Capsule)
+        Button(this.testState === TestStatus.RUNNING?'暂停测试':'开始测试')
+          .type(ButtonType.Capsule)
           .btnStyle({bg:Color.Black,font:Color.White,border:Color.White})
+          .onClick(()=> {
+            if (this.testState === TestStatus.RUNNING) {
+              this.pauseTest()
+            } else {
+              this.startTest()
+            }
+          })
+
       }
 
 
@@ -89,13 +137,31 @@ struct PracticePage {
 
 
   }
+
+  resetState() {
+    if (this.currentQuestionIndex >= this.totalCount - 1) {
+      return
+    }
+    this.currentQuestionIndex++
+    this.currentItemSelected = false
+  }
+
+  startTest() {
+    this.testState = TestStatus.RUNNING
+    this.textTimerController.start()
+  }
+
+  pauseTest() {
+    this.testState = TestStatus.PAUSE
+    this.textTimerController.pause()
+  }
+
+  stopTest() {
+    this.testState = TestStatus.DEFAULT
+    this.textTimerController.pause()
+  }
 }
 
-
-@Extend(Row) function rowStyle() {
-  .height(30)
-  .margin(10)
-}
 
 @Extend(Button) function btnStyle(color:{
   bg:ResourceColor,
