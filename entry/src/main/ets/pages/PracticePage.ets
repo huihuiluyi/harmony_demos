@@ -1,7 +1,9 @@
+import { FinishDialog } from '../comps/dialogs'
 import { SpecItem } from '../comps/SpecItem'
 import { StateItem } from '../comps/StateItem'
 import { getQuestions, Question } from '../data/data'
 import { TestStatus } from '../enums/TestStatus'
+
 @Entry
 @Component
 struct PracticePage {
@@ -16,7 +18,13 @@ struct PracticePage {
   @State selectedItemStr : string = ''
   @State testState : TestStatus = TestStatus.DEFAULT
 
-  textTimerController : TextTimerController
+  textTimerController : TextTimerController = new TextTimerController()
+
+  finishDialogController : CustomDialogController = new CustomDialogController({
+    builder: FinishDialog(),
+    autoCancel: false,
+    customStyle: true
+  })
 
   build() {
     Column(){
@@ -159,6 +167,7 @@ struct PracticePage {
   stopTest() {
     this.testState = TestStatus.DEFAULT
     this.textTimerController.pause()
+    this.finishDialogController.open()
   }
 }
 
